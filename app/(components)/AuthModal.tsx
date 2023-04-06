@@ -4,6 +4,9 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Modal from '@mui/material/Modal';
 import AuthInputs from './AuthInputs';
+import useAuth from '../../hooks/useAuth';
+import { AuthContext } from '../(context)/AuthContext';
+import { Alert, CircularProgress } from '@mui/material';
 
 export interface Inputs {
   firstName: string;
@@ -26,6 +29,7 @@ const style = {
 };
 
 export default function AuthModal({ isSignin }: { isSignin: boolean }) {
+  const { loading, data, error, setAuthState } = React.useContext(AuthContext);
   const [open, setOpen] = React.useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -42,9 +46,48 @@ export default function AuthModal({ isSignin }: { isSignin: boolean }) {
     password: '',
   });
 
+  const { signin, signup } = useAuth();
+  const handleClick = async () => {
+    if (isSignin) {
+      await signin(
+        { email: inputs.email, password: inputs.password },
+        handleClose
+      );
+    } else {
+      await signup(
+        {
+          email: inputs.email,
+          password: inputs.password,
+          firstName: inputs.firstName,
+          lastName: inputs.lastName,
+          phone: inputs.phone,
+          city: inputs.city,
+        },
+        handleClose
+      );
+    }
+  };
+
   const handleChangeInputs = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputs((current) => ({ ...current, [e.target.name]: e.target.value }));
   };
+
+  const [disabled, setDisabled] = React.useState(true);
+
+  React.useEffect(() => {
+    if (isSignin) {
+      setDisabled(!inputs.password || !inputs.email);
+    } else {
+      setDisabled(
+        !inputs.password ||
+          !inputs.email ||
+          !inputs.firstName ||
+          !inputs.lastName ||
+          !inputs.password ||
+          !inputs.phone
+      );
+    }
+  }, [inputs]);
 
   return (
     <div>
@@ -59,33 +102,44 @@ export default function AuthModal({ isSignin }: { isSignin: boolean }) {
       >
         <Box sx={style}>
           <div className='p-2 h-[500px]'>
-            <div className='uppercase font-bold text-center pb-2 border-b mb-2'>
-              <p className='text-sm'>
-                {isSignin ? 'Sign In' : 'Create Account'}
-              </p>
-            </div>
-            <div className=' m-auto'>
-              <h2 className=' text-2xl font-light text-center'>
-                {isSignin
-                  ? 'Log Into Your Account'
-                  : 'Create Your OpenTable Account'}
-              </h2>
-              <AuthInputs
-                handleChangeInputs={handleChangeInputs}
-                inputs={inputs}
-                isSignin={isSignin}
-              />
-              <button className=' uppercase bg-red-600 w-full text-white p-3 rounded text-sm mb-5 disabled:bg-gray-400'>
-                {isSignin ? 'Sign in' : 'Create account'}
-              </button>
-            </div>
+            {loading ? (
+              <div className=' flex justify-center mt-20'>
+                <CircularProgress />
+              </div>
+            ) : (
+              <>
+                <div className='uppercase font-bold text-center pb-2 border-b mb-2'>
+                  <p className='text-sm'>
+                    {isSignin ? 'Sign In' : 'Create Account'}
+                  </p>
+                </div>
+                {error && (
+                  <Alert className='my-4' severity='error'>
+                    {error}
+                  </Alert>
+                )}
+                <div className=' m-auto'>
+                  <h2 className=' text-2xl font-light text-center'>
+                    {isSignin
+                      ? 'Log Into Your Account'
+                      : 'Create Your OpenTable Account'}
+                  </h2>
+                  <AuthInputs
+                    handleChangeInputs={handleChangeInputs}
+                    inputs={inputs}
+                    isSignin={isSignin}
+                  />
+                  <button
+                    disabled={disabled}
+                    className=' uppercase bg-red-600 w-full text-white p-3 rounded text-sm mb-5 disabled:bg-gray-400'
+                    onClick={handleClick}
+                  >
+                    {isSignin ? 'Sign in' : 'Create account'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-          {/* <Typography id='modal-modal-title' variant='h6' component='h2'>
-            Text in a modal
-          </Typography>
-          <Typography id='modal-modal-description' sx={{ mt: 2 }}>
-            Duis mollis, est non commodo luctus, nisi erat porttitor ligula.
-          </Typography> */}
         </Box>
       </Modal>
     </div>
